@@ -1,14 +1,15 @@
-import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import nodemailer from "nodemailer";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 
-const app = express();
-const port = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
+const app = express();
+const port = process.env.PORT || 5000;
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || true }));
 app.use(express.json({ limit: "1mb" }));

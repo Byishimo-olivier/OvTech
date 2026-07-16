@@ -1,5 +1,4 @@
 import React from "react";
-import logo from "../../logo.png";
 import { getTranslation } from "../data/translations.js";
 
 const headerItems = ["Services", "Products", "Portfolio", "About", "Blog", "Careers"];
@@ -11,7 +10,7 @@ function Navbar({ page, dark, language, menuOpen, setDark, setLanguage, setMenuO
     <header className="nav-shell">
       <nav className="nav">
         <button className="brand" onClick={() => navigate("Home")} aria-label={t.nav.ariaHome}>
-          <img src={logo} alt="OVTECH" />
+          <img src="/logo.png" alt="OVTECH" />
         </button>
         <button className="mobile-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label={t.nav.ariaMenu}>
           <span />

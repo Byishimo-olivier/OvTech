@@ -3,7 +3,6 @@ import Estimator from "../components/Estimator.jsx";
 import Services from "./Services.jsx";
 import Products from "./Products.jsx";
 import { AboutPreview, CTA, FAQ, FeaturedProjects, Process, TechStack, Testimonials, Trusted, WhyChoose } from "../components/sections.jsx";
-import heroImage from "../../hero.jpeg";
 import { getTranslation } from "../data/translations.js";
 
 function Stat({ value, label }) {
@@ -44,7 +43,7 @@ function Home({ navigate, language = "EN" }) {
               <Stat value="24/7" label={t.home.stats[3]} />
             </div>
           </div>
-          <div className="hero-visual" style={{ "--hero-image": `url(${heroImage})` }} aria-label="OVTECH founder portrait">
+          <div className="hero-visual" style={{ "--hero-image": "url(/hero.jpeg)" }} aria-label="OVTECH founder portrait">
             <div className="talent-pill pill-one">{t.home.pills[0]}</div>
             <div className="talent-pill pill-two">{t.home.pills[1]}</div>
             <div className="talent-pill pill-three">{t.home.pills[2]}</div>

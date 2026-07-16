@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "node scripts/dev.js",
     "dev:all": "node scripts/dev-all.js",
     "server": "node server/index.js",
-    "build": "vite build",
+    "build": "vite build --configLoader runner",
+    "start": "node server/index.js",
+    "client": "vite --host 0.0.0.0",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
