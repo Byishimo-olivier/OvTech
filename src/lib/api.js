@@ -1,8 +1,22 @@
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+
+function resolveUrl(url) {
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+
+  if (apiBaseUrl) {
+    return `${apiBaseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+  }
+
+  return url;
+}
+
 export async function postJson(url, payload) {
   let response;
 
   try {
-    response = await fetch(url, {
+    response = await fetch(resolveUrl(url), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
