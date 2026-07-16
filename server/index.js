@@ -1,9 +1,9 @@
 import cors from "cors";
 import express from "express";
-import nodemailer from "nodemailer";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
+import { sendEmail } from "./email.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,28 +13,6 @@ const port = process.env.PORT || 5000;
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || true }));
 app.use(express.json({ limit: "1mb" }));
-
-const requiredEmailConfig = ["EMAIL_USER", "EMAIL_PASS", "MAIL_TO"];
-
-function assertEmailConfig() {
-  const missing = requiredEmailConfig.filter((key) => !process.env[key]);
-
-  if (missing.length > 0) {
-    throw new Error(`Missing email configuration: ${missing.join(", ")}`);
-  }
-}
-
-function createTransporter() {
-  assertEmailConfig();
-
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS.replace(/\s/g, ""),
-    },
-  });
-}
 
 function clean(value) {
   return String(value || "").trim();
@@ -52,18 +30,6 @@ function formatText(title, fields) {
     .join("\n");
 
   return `${title}\n\n${body}`;
-}
-
-async function sendEmail({ subject, replyTo, text }) {
-  const transporter = createTransporter();
-
-  await transporter.sendMail({
-    from: `"OVTECH Website" <${process.env.EMAIL_USER}>`,
-    to: process.env.MAIL_TO,
-    replyTo: replyTo || process.env.EMAIL_USER,
-    subject,
-    text,
-  });
 }
 
 app.get("/api/health", (req, res) => {
