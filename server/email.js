@@ -57,18 +57,21 @@ export function createTransporter() {
   const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
   const smtpPort = getSmtpPort(smtpHost);
   const useSecure = getSmtpSecure(smtpPort, smtpHost);
+  const connectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT || 30000);
+  const greetingTimeout = Number(process.env.SMTP_GREETING_TIMEOUT || 30000);
+  const socketTimeout = Number(process.env.SMTP_SOCKET_TIMEOUT || 30000);
 
-  return nodemailer.createTransport({
+  const config = {
     host: smtpHost,
     servername: process.env.SMTP_SERVERNAME || smtpHost,
     port: smtpPort,
     secure: useSecure,
     requireTLS: !useSecure,
-    connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT || 15000),
-    greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT || 15000),
-    socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT || 20000),
-    logger: process.env.NODE_ENV === "development",
-    debug: process.env.NODE_ENV === "development",
+    connectionTimeout,
+    greetingTimeout,
+    socketTimeout,
+    logger: true,
+    debug: true,
     lookup(hostname, options, callback) {
       dns.lookup(hostname, { family: 4, all: false }, callback);
     },
@@ -77,17 +80,44 @@ export function createTransporter() {
       user: process.env.EMAIL_USER,
       pass: String(process.env.EMAIL_PASS || "").replace(/\s/g, ""),
     },
+  };
+
+  console.log("[SMTP] Creating transporter with config:", {
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    requireTLS: config.requireTLS,
+    connectionTimeout,
+    greetingTimeout,
+    socketTimeout,
+    user: config.auth.user,
   });
+
+  return nodemailer.createTransport(config);
 }
 
 export async function sendEmail({ subject, replyTo, text }) {
+  console.log("[SMTP] Sending email with subject:", subject);
   const transporter = createTransporter();
 
-  await transporter.sendMail({
-    from: `"OVTECH Website" <${process.env.EMAIL_USER}>`,
-    to: process.env.MAIL_TO,
-    replyTo: replyTo || process.env.EMAIL_USER,
-    subject,
-    text,
-  });
+  try {
+    const result = await transporter.sendMail({
+      from: `"OVTECH Website" <${process.env.EMAIL_USER}>`,
+      to: process.env.MAIL_TO,
+      replyTo: replyTo || process.env.EMAIL_USER,
+      subject,
+      text,
+    });
+    console.log("[SMTP] Email sent successfully:", result.messageId);
+    return result;
+  } catch (error) {
+    console.error("[SMTP] Error details:", {
+      code: error.code,
+      message: error.message,
+      command: error.command,
+      address: error.address,
+      port: error.port,
+    });
+    throw error;
+  }
 }
