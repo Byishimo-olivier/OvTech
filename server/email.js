@@ -44,6 +44,13 @@ function getSmtpSecure(port, smtpHost) {
   return port === 465;
 }
 
+function getSmtpTlsOptions() {
+  return {
+    minVersion: "TLSv1.2",
+    rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== "false",
+  };
+}
+
 export function createTransporter() {
   assertEmailConfig();
 
@@ -57,18 +64,18 @@ export function createTransporter() {
     port: smtpPort,
     secure: useSecure,
     requireTLS: !useSecure,
-    connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT || 10000),
-    greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT || 10000),
-    socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT || 10000),
+    connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT || 15000),
+    greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT || 15000),
+    socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT || 20000),
+    logger: process.env.NODE_ENV === "development",
+    debug: process.env.NODE_ENV === "development",
     lookup(hostname, options, callback) {
       dns.lookup(hostname, { family: 4, all: false }, callback);
     },
-    tls: {
-      minVersion: "TLSv1.2",
-    },
+    tls: getSmtpTlsOptions(),
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS.replace(/\s/g, ""),
+      pass: String(process.env.EMAIL_PASS || "").replace(/\s/g, ""),
     },
   });
 }
