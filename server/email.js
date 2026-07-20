@@ -1,4 +1,3 @@
-import dns from "node:dns";
 import nodemailer from "nodemailer";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
 
-const requiredEmailConfig = ["EMAIL_USER", "EMAIL_PASS", "MAIL_TO"];
+const requiredEmailConfig = ["EMAIL_USER", "EMAIL_PASS"];
 
 function assertEmailConfig() {
   const missing = requiredEmailConfig.filter((key) => !process.env[key]);
@@ -18,53 +17,21 @@ function assertEmailConfig() {
   }
 }
 
-function getSmtpPort(smtpHost) {
-  const configuredPort = Number(process.env.SMTP_PORT || "");
-
-  if (Number.isFinite(configuredPort) && configuredPort > 0) {
-    return configuredPort;
-  }
-
-  return smtpHost.includes("gmail") ? 465 : 587;
-}
-
-function getSmtpSecure(port, smtpHost) {
-  if (process.env.SMTP_SECURE === "true") {
-    return true;
-  }
-
-  if (process.env.SMTP_SECURE === "false") {
-    return false;
-  }
-
-  if (smtpHost.includes("gmail")) {
-    return true;
-  }
-
-  return port === 465;
-}
-
-function getSmtpTlsOptions() {
-  return {
-    minVersion: "TLSv1.2",
-    rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== "false",
-  };
+function getRecipientAddress() {
+  return process.env.MAIL_TO || process.env.EMAIL_USER;
 }
 
 export function createTransporter() {
   assertEmailConfig();
 
-  const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
-  const smtpPort = Number(process.env.SMTP_PORT || 465);
-
   const config = {
-    host: smtpHost,
-    port: smtpPort,
+    host: "smtp.gmail.com",
+    port: 465,
     secure: true,
     family: 4,
     auth: {
       user: process.env.EMAIL_USER,
-      pass: String(process.env.EMAIL_PASS || "").replace(/\s/g, ""),
+      pass: process.env.EMAIL_PASS,
     },
     logger: true,
     debug: true,
@@ -92,7 +59,7 @@ export async function sendEmail({ subject, replyTo, text }) {
       const transporter = createTransporter();
       const result = await transporter.sendMail({
         from: `"OVTECH Website" <${process.env.EMAIL_USER}>`,
-        to: process.env.MAIL_TO,
+        to: getRecipientAddress(),
         replyTo: replyTo || process.env.EMAIL_USER,
         subject,
         text,

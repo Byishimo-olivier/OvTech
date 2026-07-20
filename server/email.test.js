@@ -10,3 +10,28 @@ test("smtp transporter uses the requested Gmail config", () => {
   assert.equal(transporter.options.family, 4);
   assert.equal(transporter.options.requireTLS, undefined);
 });
+
+test("smtp transporter accepts EMAIL_USER as the fallback recipient when MAIL_TO is missing", () => {
+  const previous = {
+    EMAIL_USER: process.env.EMAIL_USER,
+    EMAIL_PASS: process.env.EMAIL_PASS,
+    MAIL_TO: process.env.MAIL_TO,
+  };
+
+  process.env.EMAIL_USER = "sender@example.com";
+  process.env.EMAIL_PASS = "app-password";
+  delete process.env.MAIL_TO;
+
+  try {
+    const transporter = createTransporter();
+    assert.equal(transporter.options.auth.user, "sender@example.com");
+  } finally {
+    Object.entries(previous).forEach(([key, value]) => {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    });
+  }
+});
