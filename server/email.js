@@ -1,3 +1,4 @@
+import dns from "node:dns";
 import nodemailer from "nodemailer";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,9 +25,12 @@ function getRecipientAddress() {
 export function createTransporter() {
   assertEmailConfig();
 
+  const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+  const smtpPort = Number(process.env.SMTP_PORT || 465);
+
   const config = {
-    host: "smtp.gmail.com",
-    port: 465,
+    host: smtpHost,
+    port: smtpPort,
     secure: true,
     family: 4,
     auth: {
@@ -35,6 +39,9 @@ export function createTransporter() {
     },
     logger: true,
     debug: true,
+    lookup(hostname, options, callback) {
+      dns.lookup(hostname, { family: 4, all: false }, callback);
+    },
   };
 
   console.log("[SMTP] Creating transporter with config:", {

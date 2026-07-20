@@ -11,6 +11,11 @@ test("smtp transporter uses the requested Gmail config", () => {
   assert.equal(transporter.options.requireTLS, undefined);
 });
 
+test("smtp transporter lookup uses IPv4-only resolution", () => {
+  const transporter = createTransporter();
+  assert.match(transporter.options.lookup.toString(), /family:\s*4/);
+});
+
 test("smtp transporter accepts EMAIL_USER as the fallback recipient when MAIL_TO is missing", () => {
   const previous = {
     EMAIL_USER: process.env.EMAIL_USER,
