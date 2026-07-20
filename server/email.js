@@ -25,7 +25,7 @@ function getSmtpPort(smtpHost) {
     return configuredPort;
   }
 
-  return smtpHost.includes("gmail") ? 587 : 587;
+  return smtpHost.includes("gmail") ? 465 : 587;
 }
 
 function getSmtpSecure(port, smtpHost) {
@@ -38,7 +38,7 @@ function getSmtpSecure(port, smtpHost) {
   }
 
   if (smtpHost.includes("gmail")) {
-    return false;
+    return true;
   }
 
   return port === 465;
@@ -55,41 +55,26 @@ export function createTransporter() {
   assertEmailConfig();
 
   const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
-  const smtpPort = getSmtpPort(smtpHost);
-  const useSecure = getSmtpSecure(smtpPort, smtpHost);
-  const connectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT || 30000);
-  const greetingTimeout = Number(process.env.SMTP_GREETING_TIMEOUT || 30000);
-  const socketTimeout = Number(process.env.SMTP_SOCKET_TIMEOUT || 30000);
+  const smtpPort = Number(process.env.SMTP_PORT || 465);
 
   const config = {
     host: smtpHost,
-    servername: process.env.SMTP_SERVERNAME || smtpHost,
     port: smtpPort,
-    secure: useSecure,
-    requireTLS: !useSecure,
-    connectionTimeout,
-    greetingTimeout,
-    socketTimeout,
-    logger: true,
-    debug: true,
-    lookup(hostname, options, callback) {
-      dns.lookup(hostname, { family: 4, all: false }, callback);
-    },
-    tls: getSmtpTlsOptions(),
+    secure: true,
+    family: 4,
     auth: {
       user: process.env.EMAIL_USER,
       pass: String(process.env.EMAIL_PASS || "").replace(/\s/g, ""),
     },
+    logger: true,
+    debug: true,
   };
 
   console.log("[SMTP] Creating transporter with config:", {
     host: config.host,
     port: config.port,
     secure: config.secure,
-    requireTLS: config.requireTLS,
-    connectionTimeout,
-    greetingTimeout,
-    socketTimeout,
+    family: config.family,
     user: config.auth.user,
   });
 
@@ -98,26 +83,45 @@ export function createTransporter() {
 
 export async function sendEmail({ subject, replyTo, text }) {
   console.log("[SMTP] Sending email with subject:", subject);
-  const transporter = createTransporter();
+  
+  const maxRetries = 3;
+  let lastError;
 
-  try {
-    const result = await transporter.sendMail({
-      from: `"OVTECH Website" <${process.env.EMAIL_USER}>`,
-      to: process.env.MAIL_TO,
-      replyTo: replyTo || process.env.EMAIL_USER,
-      subject,
-      text,
-    });
-    console.log("[SMTP] Email sent successfully:", result.messageId);
-    return result;
-  } catch (error) {
-    console.error("[SMTP] Error details:", {
-      code: error.code,
-      message: error.message,
-      command: error.command,
-      address: error.address,
-      port: error.port,
-    });
-    throw error;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const transporter = createTransporter();
+      const result = await transporter.sendMail({
+        from: `"OVTECH Website" <${process.env.EMAIL_USER}>`,
+        to: process.env.MAIL_TO,
+        replyTo: replyTo || process.env.EMAIL_USER,
+        subject,
+        text,
+      });
+      console.log("[SMTP] Email sent successfully:", result.messageId);
+      return result;
+    } catch (error) {
+      lastError = error;
+      console.error(`[SMTP] Attempt ${attempt}/${maxRetries} failed:`, {
+        code: error.code,
+        message: error.message,
+        command: error.command,
+      });
+
+      if (attempt < maxRetries) {
+        const backoffMs = Math.pow(2, attempt) * 1000;
+        console.log(`[SMTP] Retrying in ${backoffMs}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      }
+    }
   }
+
+  console.error("[SMTP] All retry attempts failed. Final error details:", {
+    code: lastError.code,
+    message: lastError.message,
+    command: lastError.command,
+    address: lastError.address,
+    port: lastError.port,
+  });
+  
+  throw lastError;
 }
