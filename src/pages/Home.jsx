@@ -1,5 +1,6 @@
 import React from "react";
 import Estimator from "../components/Estimator.jsx";
+import Icon from "../components/Icon.jsx";
 import Services from "./Services.jsx";
 import Products from "./Products.jsx";
 import { AboutPreview, CTA, FAQ, FeaturedProjects, Process, TechStack, Testimonials, Trusted, WhyChoose } from "../components/sections.jsx";
@@ -20,47 +21,47 @@ function Home({ navigate, language = "EN" }) {
   return (
     <>
       <section className="hero">
-        <div className="hero-content">
-          <div className="hero-copy-block">
+        <div className="container hero-grid">
+          <div className="hero-copy">
             <p className="eyebrow">{t.home.eyebrow}</p>
             <h1>
-              {t.home.title} <span>{t.home.titleAccent}</span>
+              {t.home.title} {t.home.titleAccent}
             </h1>
-            <p className="hero-subtitle">{t.home.subtitle}</p>
-            <p className="hero-copy">{t.home.copy}</p>
+            <p className="hero-lead">{t.home.copy}</p>
             <div className="button-row">
               <button className="primary" onClick={() => navigate("Contact")}>
                 {t.home.schedule}
+                <Icon name="arrow" size={16} />
               </button>
               <button className="secondary" onClick={() => navigate("Portfolio")}>
                 {t.home.portfolio}
               </button>
             </div>
-            <div className="stats">
-              <Stat value="40+" label={t.home.stats[0]} />
-              <Stat value="12" label={t.home.stats[1]} />
-              <Stat value="98%" label={t.home.stats[2]} />
-              <Stat value="24/7" label={t.home.stats[3]} />
-            </div>
           </div>
-          <div className="hero-visual" style={{ "--hero-image": "url(/hero.jpeg)" }} aria-label="OVTECH founder portrait">
-            <div className="talent-pill pill-one">{t.home.pills[0]}</div>
-            <div className="talent-pill pill-two">{t.home.pills[1]}</div>
-            <div className="talent-pill pill-three">{t.home.pills[2]}</div>
-          </div>
+          <figure className="hero-photo">
+            <img src="/hero.jpeg" alt={t.sections.founderAlt} />
+            <figcaption>{t.sections.founderLabel}</figcaption>
+          </figure>
+        </div>
+
+        <div className="container stats-bar">
+          <Stat value="40+" label={t.home.stats[0]} />
+          <Stat value="12" label={t.home.stats[1]} />
+          <Stat value="98%" label={t.home.stats[2]} />
+          <Stat value="24/7" label={t.home.stats[3]} />
         </div>
       </section>
       <Trusted language={language} />
-      <Services featured language={language} />
+      <Services featured language={language} navigate={navigate} />
       <AboutPreview navigate={navigate} language={language} />
-      <Products featured language={language} />
       <FeaturedProjects language={language} />
       <Process language={language} />
+      <Products featured language={language} />
       <WhyChoose language={language} />
       <TechStack language={language} />
       <Testimonials language={language} />
-      <FAQ language={language} />
       <Estimator language={language} />
+      <FAQ language={language} />
       <CTA navigate={navigate} language={language} />
     </>
   );

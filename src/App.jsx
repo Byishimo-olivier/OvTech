@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
 import LiveChat from "./components/LiveChat.jsx";
@@ -15,12 +15,33 @@ import Blog from "./pages/Blog.jsx";
 import Careers from "./pages/Careers.jsx";
 import Contact from "./pages/Contact.jsx";
 
+function readStoredTheme() {
+  try {
+    return localStorage.getItem("ovtech-theme") === "dark";
+  } catch {
+    return false;
+  }
+}
+
 function App() {
   const [page, setPage] = useState("Home");
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(readStoredTheme);
   const [menuOpen, setMenuOpen] = useState(false);
   const [language, setLanguage] = useState("EN");
   const [chatOpen, setChatOpen] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    try {
+      localStorage.setItem("ovtech-theme", dark ? "dark" : "light");
+    } catch {
+      /* storage unavailable: the theme still applies for this visit */
+    }
+  }, [dark]);
+
+  useEffect(() => {
+    document.documentElement.lang = language.toLowerCase();
+  }, [language]);
 
   const navigate = (item) => {
     setPage(item);
@@ -31,20 +52,20 @@ function App() {
   const pages = {
     Home: <Home navigate={navigate} language={language} />,
     About: <About />,
-    Services: <Services language={language} />,
+    Services: <Services language={language} navigate={navigate} />,
     Products: <Products language={language} />,
     Portfolio: <Portfolio />,
     Industries: <Industries />,
-    Technologies: <Technologies />,
-    Process: <ProcessPage />,
-    Pricing: <Pricing />,
+    Technologies: <Technologies language={language} />,
+    Process: <ProcessPage language={language} />,
+    Pricing: <Pricing navigate={navigate} language={language} />,
     Blog: <Blog />,
     Careers: <Careers />,
     Contact: <Contact language={language} />,
   };
 
   return (
-    <div className={dark ? "app dark" : "app"}>
+    <div className="app">
       <Navbar
         page={page}
         dark={dark}

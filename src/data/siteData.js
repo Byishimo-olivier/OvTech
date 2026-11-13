@@ -37,16 +37,27 @@ export const products = [
 
 export const projects = [
   {
+    name: "Maintenance Management System",
+    image: "/projects/fixnest.jpg",
+    link: "https://fixnest.rw/",
+    linkLabel: "fixnest.rw",
+    tech: ["React", "Express", "MongoDB"],
+    description: "FixNest: a maintenance platform for work orders, assets, technician scheduling, and SLA tracking.",
+  },
+  {
+    name: "Project Management System",
+    image: "/projects/infrasoko.jpg",
+    link: "https://www.infrasoko.com/",
+    linkLabel: "infrasoko.com",
+    tech: [],
+    description:
+      "InfraSoko: a project management platform for infrastructure teams, with progress tracking, budget control, document management, and team collaboration.",
+  },
+  {
     name: "Property Management System",
     image: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=900&q=80",
     tech: ["React", "Node.js", "PostgreSQL"],
     description: "A rental operations platform for units, tenants, billing, maintenance, and owner reporting.",
-  },
-  {
-    name: "Maintenance Management System",
-    image: "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=900&q=80",
-    tech: ["React", "Express", "MongoDB"],
-    description: "A field-service workflow for work orders, assets, technician scheduling, and SLA tracking.",
   },
   {
     name: "Event Management Platform",

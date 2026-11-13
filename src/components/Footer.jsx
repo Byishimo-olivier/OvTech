@@ -1,45 +1,95 @@
-import React from "react";
+import React, { useState } from "react";
+import { Brand } from "./Navbar.jsx";
+import { postJson } from "../lib/api.js";
+import { getTranslation } from "../data/translations.js";
 
-function Footer({ navigate }) {
+function Footer({ navigate, language = "EN" }) {
+  const t = getTranslation(language);
+  const f = t.footer;
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState({ type: "", message: "" });
+  const [sending, setSending] = useState(false);
+
+  const subscribe = async (event) => {
+    event.preventDefault();
+    setSending(true);
+    setStatus({ type: "", message: "" });
+
+    try {
+      const result = await postJson("/api/subscribe", { email });
+      setEmail("");
+      setStatus({ type: "success", message: result.alreadySubscribed ? f.alreadySubscribed : f.subscribed });
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const columns = [
+    [f.company, ["About", "Services", "Products", "Portfolio", "Careers"].map((item) => [t.nav[item], item])],
+    [f.engineering, ["Process", "Technologies", "Industries", "Pricing"].map((item) => [t.nav[item], item])],
+    [
+      f.resources,
+      [
+        [t.nav.Blog, "Blog"],
+        [f.knowledge, "Contact"],
+        [f.portal, "Contact"],
+        [t.nav.Contact, "Contact"],
+      ],
+    ],
+  ];
+
   return (
     <footer className="footer">
       <div className="container footer-grid">
-        <div>
-          <button className="brand footer-brand" onClick={() => navigate("Home")}>
-            <span className="brand-mark">OV</span>
-            <span>
-              <strong>OVTECH</strong>
-              <small>Innovating Today. Empowering Tomorrow.</small>
-            </span>
-          </button>
-          <p>Software development, IT consulting, cloud solutions, cybersecurity, AI, and long-term support.</p>
+        <div className="footer-brand">
+          <Brand onClick={() => navigate("Home")} label={t.nav.ariaHome} />
+          <p className="footer-tagline">{f.tagline}</p>
+          <p>{f.text}</p>
         </div>
-        <div>
-          <h3>Company</h3>
-          {["About", "Services", "Portfolio", "Products", "Careers"].map((item) => (
-            <button key={item} onClick={() => navigate(item)}>
-              {item}
-            </button>
-          ))}
-        </div>
-        <div>
-          <h3>Resources</h3>
-          {["Blog", "Knowledge Base", "Customer Portal", "Newsletter"].map((item) => (
-            <button key={item} onClick={() => (item === "Blog" ? navigate("Blog") : navigate("Contact"))}>
-              {item}
-            </button>
-          ))}
-        </div>
-        <div>
-          <h3>Newsletter</h3>
-          <p>Get business technology insights and OVTECH updates.</p>
-          <div className="newsletter">
-            <input placeholder="Email address" />
-            <button className="primary small">Subscribe</button>
+        {columns.map(([heading, links]) => (
+          <div key={heading}>
+            <h3>{heading}</h3>
+            <div className="footer-links">
+              {links.map(([label, target]) => (
+                <button key={label} onClick={() => navigate(target)}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
+        ))}
+        <div className="footer-newsletter">
+          <h3>{f.newsletter}</h3>
+          <p>{f.newsletterText}</p>
+          <form className="newsletter" onSubmit={subscribe}>
+            <input
+              type="email"
+              name="email"
+              placeholder={f.emailPlaceholder}
+              aria-label={f.emailPlaceholder}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+            <button className="primary small" type="submit" disabled={sending}>
+              {sending ? f.subscribing : f.subscribe}
+            </button>
+          </form>
+          {status.message && (
+            <p className={`form-status newsletter-status ${status.type}`} role="status">
+              {status.message}
+            </p>
+          )}
         </div>
       </div>
-      <div className="footer-bottom">© 2026 OVTECH. All rights reserved.</div>
+      <div className="footer-bottom">
+        <div className="container">
+          <span>{f.copyright}</span>
+          <span>{f.built}</span>
+        </div>
+      </div>
     </footer>
   );
 }

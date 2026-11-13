@@ -1,34 +1,26 @@
 import React from "react";
-import SectionHeader from "../components/SectionHeader.jsx";
+import PageHero from "../components/PageHero.jsx";
+import { ProjectCard } from "../components/sections.jsx";
 import { projects } from "../data/siteData.js";
 
 function Portfolio() {
   return (
-    <section className="section">
-      <div className="container">
-        <SectionHeader
-          eyebrow="Portfolio"
-          title="Completed projects across practical business domains"
-          text="Each solution includes useful images, technologies, descriptions, demo actions, and optional GitHub links."
-        />
-        <div className="project-grid">
-          {projects.map((project) => (
-            <article className="project-card" key={project.name}>
-              <img src={project.image} alt={`${project.name} interface concept`} />
-              <div>
-                <h3>{project.name}</h3>
-                <p>{project.description}</p>
-                <div className="tag-row">
-                  {project.tech.map((tech) => (
-                    <span key={tech}>{tech}</span>
-                  ))}
-                </div>
-              </div>
-            </article>
-          ))}
+    <>
+      <PageHero
+        eyebrow="Portfolio"
+        title="Completed projects across practical business domains"
+        text="Each solution is built with clear workflows, secure data handling, responsive interfaces, and maintainable architecture."
+      />
+      <section className="section">
+        <div className="container">
+          <div className="grid cols-3">
+            {projects.map((project) => (
+              <ProjectCard project={project} key={project.name} />
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
 

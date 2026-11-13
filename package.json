@@ -10,7 +10,9 @@
     "build": "vite build --configLoader runner",
     "start": "node server/index.js",
     "client": "vite --host 0.0.0.0",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "newsletter": "node scripts/send-update.js",
+    "test": "node --test \"server/**/*.test.js\""
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",

@@ -1,12 +1,19 @@
 import React, { useState } from "react";
 import PageHero from "../components/PageHero.jsx";
+import Icon from "../components/Icon.jsx";
 import { postJson } from "../lib/api.js";
+import { getTranslation, translations } from "../data/translations.js";
 
-function Contact() {
+// Option values stay in English so enquiry emails are consistent; labels follow the selected language.
+const serviceValues = translations.EN.services.items.map(([title]) => title);
+
+function Contact({ language = "EN" }) {
+  const t = getTranslation(language);
+  const c = t.contact;
   const [form, setForm] = useState({
     name: "",
     email: "",
-    service: "Custom Software Development",
+    service: serviceValues[0],
     message: "",
   });
   const [status, setStatus] = useState({ type: "", message: "" });
@@ -30,10 +37,10 @@ function Contact() {
       setForm({
         name: "",
         email: "",
-        service: "Custom Software Development",
+        service: serviceValues[0],
         message: "",
       });
-      setStatus({ type: "success", message: "Message sent. We will contact you shortly." });
+      setStatus({ type: "success", message: c.sent });
     } catch (error) {
       setStatus({ type: "error", message: error.message });
     } finally {
@@ -43,34 +50,36 @@ function Contact() {
 
   return (
     <>
-      <PageHero title="Contact OVTECH" text="Tell us what you want to build, improve, secure, or automate." />
+      <PageHero eyebrow={c.heroEyebrow} title={c.heroTitle} text={c.heroText} />
       <section className="section">
         <div className="container contact-grid">
-          <form className="contact-form" onSubmit={submitContact}>
-            <label>
-              Full name
-              <input name="name" type="text" placeholder="Your name" value={form.name} onChange={updateField} required />
-            </label>
-            <label>
-              Email
-              <input name="email" type="email" placeholder="you@company.com" value={form.email} onChange={updateField} required />
-            </label>
-            <label>
-              Service needed
+          <form className="card form-card" onSubmit={submitContact}>
+            <div className="form-row">
+              <label className="field">
+                {c.fullName}
+                <input name="name" type="text" placeholder={c.namePlaceholder} value={form.name} onChange={updateField} required />
+              </label>
+              <label className="field">
+                {c.emailLabel}
+                <input name="email" type="email" placeholder={c.emailPlaceholder} value={form.email} onChange={updateField} required />
+              </label>
+            </div>
+            <label className="field">
+              {c.service}
               <select name="service" value={form.service} onChange={updateField}>
-                <option>Custom Software Development</option>
-                <option>Website Development</option>
-                <option>Mobile Application Development</option>
-                <option>IT Consulting</option>
-                <option>Maintenance & Support</option>
+                {serviceValues.map((value, index) => (
+                  <option key={value} value={value}>
+                    {t.services.items[index][0]}
+                  </option>
+                ))}
               </select>
             </label>
-            <label>
-              Message
+            <label className="field">
+              {c.message}
               <textarea
                 name="message"
-                rows="5"
-                placeholder="Briefly describe your project"
+                rows="6"
+                placeholder={c.messagePlaceholder}
                 value={form.message}
                 onChange={updateField}
                 required
@@ -78,19 +87,56 @@ function Contact() {
             </label>
             {status.message && <p className={`form-status ${status.type}`}>{status.message}</p>}
             <button className="primary" type="submit" disabled={sending}>
-              {sending ? "Sending..." : "Send Message"}
+              {sending ? c.sending : c.send}
+              {!sending && <Icon name="arrow" size={16} />}
             </button>
           </form>
-          <aside className="contact-card">
-            <h3>Contact details</h3>
-            <p><strong>Phone:</strong> +250 783227490</p>
-            
-            <p><a href="mailto:olibyishi@gmail.com"><strong>Email:</strong> olibyishi@gmail.com</a></p>
-            <p><a href="https://wa.me/2783227490" target="_blank" rel="noopener noreferrer"><strong>WhatsApp:</strong> +250 783227490</a></p>
-            <p><strong>Location:</strong> KN 84 St, Kigali</p>
+
+          <aside className="card contact-card">
+            <h3>{c.details}</h3>
+            <ul className="contact-list">
+              <li>
+                <span className="icon-tile small">
+                  <Icon name="phone" size={17} />
+                </span>
+                <span>
+                  <small>{c.phone}</small>
+                  <a href="tel:+250783227490">+250 783227490</a>
+                </span>
+              </li>
+              <li>
+                <span className="icon-tile small">
+                  <Icon name="mail" size={17} />
+                </span>
+                <span>
+                  <small>{c.email}</small>
+                  <a href="mailto:olibyishi@gmail.com">olibyishi@gmail.com</a>
+                </span>
+              </li>
+              <li>
+                <span className="icon-tile small">
+                  <Icon name="chat" size={17} />
+                </span>
+                <span>
+                  <small>{c.whatsapp}</small>
+                  <a href="https://wa.me/2783227490" target="_blank" rel="noopener noreferrer">
+                    +250 783227490
+                  </a>
+                </span>
+              </li>
+              <li>
+                <span className="icon-tile small">
+                  <Icon name="pin" size={17} />
+                </span>
+                <span>
+                  <small>{c.location}</small>
+                  KN 84 St, Kigali
+                </span>
+              </li>
+            </ul>
             <div className="map-box">
               <iframe
-                title="OVTECH location on Google Maps"
+                title={c.mapTitle}
                 src="https://www.google.com/maps?q=KN%2084%20St%2C%20Kigali&output=embed"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"

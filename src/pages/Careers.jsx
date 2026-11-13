@@ -4,7 +4,7 @@ import PageHero from "../components/PageHero.jsx";
 function Careers() {
   return (
     <>
-      <PageHero title="Careers" text="Join a team that values learning, ownership, thoughtful engineering, and useful technology." />
+      <PageHero eyebrow="Careers" title="Careers" text="Join a team that values learning, ownership, thoughtful engineering, and useful technology." />
       {/* <section className="section">
         <div className="container split">
           <div>
@@ -20,7 +20,7 @@ function Careers() {
               ))}
             </div>
           </div>
-          <div className="culture-panel">
+          <div className="card culture-panel">
             <h3>Company culture</h3>
             <p>
               We encourage practical curiosity, clear communication, mentorship, code quality, and client empathy. Internship

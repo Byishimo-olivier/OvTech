@@ -5,12 +5,16 @@ import { industries } from "../data/siteData.js";
 function Industries() {
   return (
     <>
-      <PageHero title="Industries" text="We serve organizations that need dependable software for daily operations, service delivery, and growth." />
+      <PageHero
+        eyebrow="Industries"
+        title="Industries"
+        text="We serve organizations that need dependable software for daily operations, service delivery, and growth."
+      />
       <section className="section">
         <div className="container">
-          <div className="industry-grid">
+          <div className="grid cols-3">
             {industries.map((industry) => (
-              <article key={industry}>
+              <article className="card" key={industry}>
                 <h3>{industry}</h3>
                 <p>Digital platforms, integrations, dashboards, and workflow automation tailored for {industry.toLowerCase()} teams.</p>
               </article>
