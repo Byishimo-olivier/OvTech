@@ -1,4 +1,5 @@
 import dns from "node:dns";
+import net from "node:net";
 import nodemailer from "nodemailer";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,19 +45,45 @@ function assertEmailConfig() {
   }
 }
 
-export function createTransporter() {
+function smtpHostname() {
+  return process.env.SMTP_HOST || "smtp.gmail.com";
+}
+
+/**
+ * Nodemailer ignores `family`/`lookup` options and tries IPv6 addresses too, which fails with
+ * ENETUNREACH on servers without IPv6 routing. So we resolve an IPv4 address ourselves.
+ */
+export async function resolveSmtpIPv4(hostname = smtpHostname()) {
+  if (net.isIP(hostname)) return hostname;
+  try {
+    const [address] = await dns.promises.resolve4(hostname);
+    if (address) return address;
+  } catch {
+    // Fall back to the OS resolver below (e.g. hosts file, local DNS quirks).
+  }
+  const { address } = await dns.promises.lookup(hostname, { family: 4 });
+  return address;
+}
+
+/**
+ * @param {object} [options]
+ * @param {string} [options.ip] IPv4 address to connect to. TLS is still verified against the hostname.
+ */
+export function createTransporter({ ip } = {}) {
   assertEmailConfig();
 
+  const hostname = smtpHostname();
   const port = Number(process.env.SMTP_PORT || 465);
   // Port 465 uses implicit TLS; 587/25 start plain and upgrade with STARTTLS.
   const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : port === 465;
   const verbose = process.env.SMTP_DEBUG === "true";
 
   const config = {
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    host: ip || hostname,
+    // Certificate check and SNI use the real hostname even when connecting by IP.
+    servername: hostname,
     port,
     secure,
-    family: 4,
     auth: {
       user: process.env.EMAIL_USER,
       // Google shows App Passwords as "abcd efgh ijkl mnop"; the spaces are not part of it.
@@ -67,9 +94,6 @@ export function createTransporter() {
     socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT || 15000),
     logger: verbose,
     debug: verbose,
-    lookup(hostname, options, callback) {
-      dns.lookup(hostname, { family: 4, all: false }, callback);
-    },
   };
 
   return nodemailer.createTransport(config);
@@ -121,7 +145,8 @@ async function sendWithBrevo({ to, subject, text, html, replyTo }) {
 
 async function sendWithSmtp({ to, subject, text, html, replyTo }) {
   const sender = getSender();
-  return createTransporter().sendMail({
+  const ip = await resolveSmtpIPv4();
+  return createTransporter({ ip }).sendMail({
     from: `"${sender.name}" <${sender.email}>`,
     to,
     replyTo: replyTo || sender.email,

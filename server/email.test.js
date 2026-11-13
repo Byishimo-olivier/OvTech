@@ -1,19 +1,27 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createTransporter } from "./email.js";
+import net from "node:net";
+import { createTransporter, resolveSmtpIPv4 } from "./email.js";
 
 test("smtp transporter uses the requested Gmail config", () => {
   const transporter = createTransporter();
   assert.equal(transporter.options.host, "smtp.gmail.com");
+  assert.equal(transporter.options.servername, "smtp.gmail.com");
   assert.equal(transporter.options.port, 465);
   assert.equal(transporter.options.secure, true);
-  assert.equal(transporter.options.family, 4);
   assert.equal(transporter.options.requireTLS, undefined);
 });
 
-test("smtp transporter lookup uses IPv4-only resolution", () => {
-  const transporter = createTransporter();
-  assert.match(transporter.options.lookup.toString(), /family:\s*4/);
+test("smtp transporter connects to a given IPv4 address but verifies TLS against the hostname", () => {
+  const transporter = createTransporter({ ip: "203.0.113.10" });
+  assert.equal(transporter.options.host, "203.0.113.10");
+  assert.equal(transporter.options.servername, "smtp.gmail.com");
+});
+
+test("resolveSmtpIPv4 returns an IPv4 address, never IPv6", async () => {
+  assert.equal(await resolveSmtpIPv4("203.0.113.10"), "203.0.113.10");
+  const address = await resolveSmtpIPv4("localhost");
+  assert.equal(net.isIPv4(address), true);
 });
 
 test("smtp transporter accepts EMAIL_USER as the fallback recipient when MAIL_TO is missing", () => {
