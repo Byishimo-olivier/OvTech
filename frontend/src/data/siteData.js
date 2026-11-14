@@ -54,6 +54,15 @@ export const projects = [
       "InfraSoko: a project management platform for infrastructure teams, with progress tracking, budget control, document management, and team collaboration.",
   },
   {
+    name: "Corporate Website Redesign",
+    image: "/projects/ukifam.jpg",
+    link: "https://ukifam.com/",
+    linkLabel: "ukifam.com",
+    tech: ["PHP", "Bootstrap", "JavaScript"],
+    description:
+      "UKIFAM: we modified and redesigned the website of this Kigali ICT company, with a modern homepage, clearer service pages, and refreshed team and contact sections.",
+  },
+  {
     name: "Property Management System",
     image: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=900&q=80",
     tech: ["React", "Node.js", "PostgreSQL"],

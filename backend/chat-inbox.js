@@ -19,6 +19,19 @@ const MAX_RETRY_MS = 5 * 60 * 1000;
 
 let started = false;
 
+/** Safe-to-share state of the watcher, shown at /api/health (no addresses or secrets). */
+const status = { state: "off", mailbox: null, lastError: null, lastErrorAt: null, lastCheckAt: null, repliesAdded: 0 };
+
+export function getChatInboxStatus() {
+  if (!chatInboxEnabled()) return { state: "off", reason: "EMAIL_USER / EMAIL_PASS missing or CHAT_INBOX=off" };
+  return { ...status };
+}
+
+function describeError(error) {
+  // imapflow puts Gmail's own explanation (e.g. "Invalid credentials") in responseText.
+  return [error.code, error.responseText || error.message].filter(Boolean).join(": ").slice(0, 200);
+}
+
 export function chatInboxEnabled() {
   return Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS) && process.env.CHAT_INBOX !== "off";
 }
@@ -34,6 +47,7 @@ function agentAddresses() {
 export function startChatInbox() {
   if (started || !chatInboxEnabled()) return;
   started = true;
+  status.state = "starting";
   runForever();
 }
 
@@ -42,9 +56,13 @@ async function runForever() {
   for (;;) {
     try {
       await watchSession();
+      status.state = "reconnecting";
       retryMs = 5000;
     } catch (error) {
-      console.error("[chat-inbox] connection failed:", error.code || "", error.message);
+      status.state = "error";
+      status.lastError = describeError(error);
+      status.lastErrorAt = new Date().toISOString();
+      console.error("[chat-inbox] connection failed:", status.lastError);
     }
     await new Promise((resolve) => setTimeout(resolve, retryMs));
     retryMs = Math.min(retryMs * 2, MAX_RETRY_MS);
@@ -68,9 +86,11 @@ async function watchSession() {
     secure: true,
     auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS.replace(/\s/g, "") },
     logger: false,
+    connectionTimeout: 20 * 1000,
   });
   client.on("error", (error) => console.error("[chat-inbox] error:", error.message));
 
+  status.state = "connecting";
   await client.connect();
   let timer;
   try {
@@ -79,6 +99,9 @@ async function watchSession() {
 
     const since = new Date(Date.now() - BACKFILL_DAYS * 24 * 60 * 60 * 1000);
     let lastUid = await processUids(client, await client.search({ since }, { uid: true }), 0);
+    status.state = "watching";
+    status.mailbox = mailbox;
+    status.lastCheckAt = new Date().toISOString();
     console.log(`[chat-inbox] watching "${mailbox}" for live chat replies`);
 
     await new Promise((resolve) => {
@@ -97,8 +120,11 @@ async function watchSession() {
             const uids = await client.search({ uid: `${lastUid + 1}:*` }, { uid: true });
             lastUid = await processUids(client, uids, lastUid);
           } while (again);
+          status.lastCheckAt = new Date().toISOString();
         } catch (error) {
-          console.error("[chat-inbox] check failed:", error.message);
+          status.lastError = describeError(error);
+          status.lastErrorAt = new Date().toISOString();
+          console.error("[chat-inbox] check failed:", status.lastError);
           client.close();
         } finally {
           busy = false;
@@ -156,6 +182,7 @@ async function processUids(client, uids, lastUid) {
         at: parsed.date,
         emailMessageId: reply.messageId,
       });
+      if (stored) status.repliesAdded += 1;
       if (stored) console.log(`[chat-inbox] reply added to chat ${reply.conversationId.slice(0, 6)}`);
     } catch (error) {
       console.error("[chat-inbox] could not read reply:", error.message);

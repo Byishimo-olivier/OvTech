@@ -11,7 +11,7 @@ import {
   isConversationId,
   newConversationId,
 } from "./chat.js";
-import { CHAT_NOTIFICATION_HEADER, chatInboxEnabled, startChatInbox } from "./chat-inbox.js";
+import { CHAT_NOTIFICATION_HEADER, chatInboxEnabled, getChatInboxStatus, startChatInbox } from "./chat-inbox.js";
 import {
   addSubscriber,
   isValidEmail,
@@ -120,7 +120,7 @@ function simplePage(title, message) {
 }
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, emailProvider: emailProvider(), subscriberStore: subscriberStore() });
+  res.json({ ok: true, emailProvider: emailProvider(), subscriberStore: subscriberStore(), chatInbox: getChatInboxStatus() });
 });
 
 app.post("/api/contact", formLimiter, async (req, res) => {
