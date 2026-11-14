@@ -5,6 +5,16 @@ import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 import { emailProvider, getAdminAddress, sendEmail } from "./email.js";
 import {
+  MAX_MESSAGE_LENGTH,
+  addMessage,
+  chatReplyAddress,
+  conversationLabel,
+  getMessages,
+  isConversationId,
+  newConversationId,
+} from "./chat.js";
+import { CHAT_NOTIFICATION_HEADER, chatInboxEnabled, startChatInbox } from "./chat-inbox.js";
+import {
   addSubscriber,
   isValidEmail,
   listSubscribers,
@@ -140,32 +150,76 @@ app.post("/api/contact", formLimiter, async (req, res) => {
   }
 });
 
-app.post("/api/live-chat", formLimiter, async (req, res) => {
-  const name = clean(req.body.name) || "Website visitor";
-  const email = clean(req.body.email);
-  const message = clean(req.body.message);
-  const missing = validate({ message });
+/* ----- Live chat: visitor messages go to email, email replies come back into the chat ----- */
 
-  if (missing.length > 0) {
+const chatSendLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 30 });
+const chatPollLimiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
+
+app.post("/api/chat/messages", chatSendLimiter, async (req, res) => {
+  const name = clean(req.body.name).slice(0, 80) || "Website visitor";
+  const rawEmail = normalizeEmail(req.body.email);
+  const email = isValidEmail(rawEmail) ? rawEmail : "";
+  const message = clean(req.body.message);
+
+  if (!message) {
     return res.status(400).json({ error: "Please type a message first." });
   }
+  if (message.length > MAX_MESSAGE_LENGTH) {
+    return res.status(400).json({ error: `Please keep messages under ${MAX_MESSAGE_LENGTH} characters.` });
+  }
+
+  const conversationId = isConversationId(req.body.conversationId) ? req.body.conversationId : newConversationId();
+  const replyAddress = chatInboxEnabled() ? chatReplyAddress(conversationId) : null;
+  const admin = getAdminAddress();
 
   try {
     await sendEmail({
-      subject: `New Over Rentals live chat message from ${name}`,
-      replyTo: email && isValidEmail(normalizeEmail(email)) ? email : undefined,
-      text: formatText("New live chat message", {
-        Name: name,
-        Email: email || "Not provided",
-        Message: message,
-      }),
-    });
+      // Sent to the chat's own reply address, so pressing "Reply" in Gmail always lands there.
+      to: replyAddress || admin,
+      cc: replyAddress && normalizeEmail(admin) !== normalizeEmail(process.env.EMAIL_USER) ? admin : undefined,
+      replyTo: replyAddress || email || undefined,
+      headers: { [CHAT_NOTIFICATION_HEADER]: "visitor" },
+      subject: `Live chat: ${name} [#${conversationLabel(conversationId)}]`,
+      text:
+        `${name} wrote in the website live chat:
 
-    res.json({ ok: true, message: "Chat message sent successfully." });
+${message}
+
+` +
+        `Name: ${name}
+Email: ${email || "Not provided"}
+
+---
+` +
+        (replyAddress
+          ? "Reply to this email to answer. Your reply appears in the visitor's chat window within a few seconds."
+          : "Chat replies are off (CHAT_INBOX=off), so reply to the visitor by email."),
+    });
   } catch (error) {
     console.error("Live chat email failed:", error.message);
-    res.status(500).json({ error: "Could not send your chat message. Please try again." });
+    return res.status(500).json({ error: "Could not send your message. Please try again." });
   }
+
+  try {
+    const stored = await addMessage(conversationId, { from: "visitor", text: message, name, email });
+    return res.json({ ok: true, conversationId, message: stored });
+  } catch (error) {
+    // The team already has the email; only the server-side copy is missing.
+    console.error("Live chat store failed:", error.message);
+    return res.json({
+      ok: true,
+      conversationId,
+      message: { id: `local-${Date.now()}`, from: "visitor", text: message, at: new Date().toISOString() },
+    });
+  }
+});
+
+app.get("/api/chat/:id/messages", chatPollLimiter, async (req, res) => {
+  if (!isConversationId(req.params.id)) {
+    return res.status(400).json({ error: "Invalid conversation." });
+  }
+  res.set("Cache-Control", "no-store");
+  res.json({ messages: await getMessages(req.params.id) });
 });
 
 app.post("/api/subscribe", formLimiter, async (req, res) => {
@@ -289,4 +343,5 @@ app.use((req, res) => {
 
 app.listen(port, () => {
   console.log(`Over Rentals server running on http://localhost:${port} (email: ${emailProvider()}, subscribers: ${subscriberStore()})`);
+  startChatInbox();
 });

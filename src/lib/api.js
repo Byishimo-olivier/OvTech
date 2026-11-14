@@ -45,3 +45,12 @@ export async function postJson(url, payload) {
 
   return result;
 }
+
+export async function getJson(url) {
+  const response = await fetch(resolveUrl(url), { headers: { Accept: "application/json" } });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.error || "Request failed.");
+  }
+  return result;
+}

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import net from "node:net";
-import { createTransporter, resolveSmtpIPv4 } from "./email.js";
+import { createTransporter, resolveIPv4 } from "./email.js";
 
 test("smtp transporter uses the requested Gmail config", () => {
   const transporter = createTransporter();
@@ -18,9 +18,9 @@ test("smtp transporter connects to a given IPv4 address but verifies TLS against
   assert.equal(transporter.options.servername, "smtp.gmail.com");
 });
 
-test("resolveSmtpIPv4 returns an IPv4 address, never IPv6", async () => {
-  assert.equal(await resolveSmtpIPv4("203.0.113.10"), "203.0.113.10");
-  const address = await resolveSmtpIPv4("localhost");
+test("resolveIPv4 returns an IPv4 address, never IPv6", async () => {
+  assert.equal(await resolveIPv4("203.0.113.10"), "203.0.113.10");
+  const address = await resolveIPv4("localhost");
   assert.equal(net.isIPv4(address), true);
 });
 

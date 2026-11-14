@@ -53,7 +53,7 @@ function smtpHostname() {
  * Nodemailer ignores `family`/`lookup` options and tries IPv6 addresses too, which fails with
  * ENETUNREACH on servers without IPv6 routing. So we resolve an IPv4 address ourselves.
  */
-export async function resolveSmtpIPv4(hostname = smtpHostname()) {
+export async function resolveIPv4(hostname = smtpHostname()) {
   if (net.isIP(hostname)) return hostname;
   try {
     const [address] = await dns.promises.resolve4(hostname);
@@ -115,7 +115,7 @@ export function textToHtml(text) {
   return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#111827">${body}</div>`;
 }
 
-async function sendWithBrevo({ to, subject, text, html, replyTo }) {
+async function sendWithBrevo({ to, cc, subject, text, html, replyTo, headers }) {
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
@@ -126,7 +126,9 @@ async function sendWithBrevo({ to, subject, text, html, replyTo }) {
     body: JSON.stringify({
       sender: getSender(),
       to: [{ email: to }],
+      ...(cc ? { cc: [{ email: cc }] } : {}),
       ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+      ...(headers ? { headers } : {}),
       subject,
       textContent: text,
       htmlContent: html || textToHtml(text),
@@ -143,16 +145,18 @@ async function sendWithBrevo({ to, subject, text, html, replyTo }) {
   return response.json();
 }
 
-async function sendWithSmtp({ to, subject, text, html, replyTo }) {
+async function sendWithSmtp({ to, cc, subject, text, html, replyTo, headers }) {
   const sender = getSender();
-  const ip = await resolveSmtpIPv4();
+  const ip = await resolveIPv4();
   return createTransporter({ ip }).sendMail({
     from: `"${sender.name}" <${sender.email}>`,
     to,
+    cc,
     replyTo: replyTo || sender.email,
     subject,
     text,
     html: html || textToHtml(text),
+    headers,
   });
 }
 
@@ -160,7 +164,7 @@ async function sendWithSmtp({ to, subject, text, html, replyTo }) {
  * Send one email. `to` defaults to the admin inbox (MAIL_TO), so contact and chat
  * notifications can call sendEmail({ subject, text, replyTo }).
  */
-export async function sendEmail({ to = getAdminAddress(), subject, text, html, replyTo }) {
+export async function sendEmail({ to = getAdminAddress(), cc, subject, text, html, replyTo, headers }) {
   assertEmailConfig();
 
   const provider = emailProvider();
@@ -170,7 +174,7 @@ export async function sendEmail({ to = getAdminAddress(), subject, text, html, r
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const result = await send({ to, subject, text, html, replyTo });
+      const result = await send({ to, cc, subject, text, html, replyTo, headers });
       console.log(`[email] sent via ${provider}: "${subject}"`);
       return result;
     } catch (error) {
