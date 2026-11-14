@@ -1,13 +1,7 @@
+import "./env.js";
 import dns from "node:dns";
 import net from "node:net";
 import nodemailer from "nodemailer";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import dotenv from "dotenv";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, "..", ".env"), override: true });
 
 /*
  * Two ways to send mail:

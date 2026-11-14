@@ -22,7 +22,7 @@ export async function postJson(url, payload) {
       body: JSON.stringify(payload),
     });
   } catch (error) {
-    throw new Error("Backend server is not running. Start it with npm run server or npm run dev:all.");
+    throw new Error("Could not reach the server. Please check your connection and try again.");
   }
 
   const text = await response.text();
@@ -38,7 +38,7 @@ export async function postJson(url, payload) {
     const proxyFailed = result.error && result.error.includes("ECONNREFUSED");
     throw new Error(
       proxyFailed
-        ? "Backend server is not running. Start it with npm run server or npm run dev:all."
+        ? "Could not reach the server. Please try again in a moment."
         : result.error || "Request failed. Please try again.",
     );
   }

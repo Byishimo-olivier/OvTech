@@ -1,8 +1,6 @@
+import "./env.js";
 import cors from "cors";
 import express from "express";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import dotenv from "dotenv";
 import { emailProvider, getAdminAddress, sendEmail } from "./email.js";
 import {
   MAX_MESSAGE_LENGTH,
@@ -25,15 +23,19 @@ import {
   verifyUnsubscribeToken,
 } from "./subscribers.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, "..", ".env"), override: true });
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Render (and most hosts) sit behind one proxy; this makes req.ip and req.protocol correct.
-app.set("trust proxy", 1);
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || true }));
+// Trust proxies on this machine / private network (the Vite proxy, nginx, Render) so req.ip is the
+// real visitor (for rate limits) and req.protocol/host are the public ones (for unsubscribe links).
+app.set("trust proxy", process.env.TRUST_PROXY || "loopback, linklocal, uniquelocal");
+
+// Which websites may call this API from the browser. Comma-separated; empty = allow all.
+const allowedOrigins = String(process.env.CLIENT_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+app.use(cors({ origin: allowedOrigins.length ? allowedOrigins : true }));
 app.use(express.json({ limit: "1mb" }));
 
 function clean(value) {
@@ -103,13 +105,18 @@ function requireAdmin(req, res, next) {
   return next();
 }
 
+/** The public website address, for links on pages the backend renders itself. */
+function frontendUrl() {
+  return process.env.FRONTEND_URL || allowedOrigins[0] || "/";
+}
+
 function simplePage(title, message) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title} | Over Rentals</title></head>
 <body style="margin:0;font-family:Arial,Helvetica,sans-serif;background:#f7f8fa;color:#111827">
 <main style="max-width:520px;margin:80px auto;padding:32px;background:#fff;border:1px solid #e5e7eb;border-radius:12px">
 <h1 style="margin:0 0 12px;font-size:24px">${title}</h1><p style="margin:0 0 24px;color:#374151;line-height:1.6">${message}</p>
-<a href="/" style="color:#2f56d6;font-weight:600">Back to Over Rentals</a></main></body></html>`;
+<a href="${frontendUrl()}" style="color:#2f56d6;font-weight:600">Back to Over Rentals</a></main></body></html>`;
 }
 
 app.get("/api/health", (req, res) => {
@@ -335,13 +342,16 @@ app.post("/api/newsletter", requireAdmin, async (req, res) => {
   res.json({ ok: failed.length === 0, total: subscribers.length, sent: subscribers.length - failed.length, failed });
 });
 
-const distPath = path.join(__dirname, "..", "dist");
-app.use(express.static(distPath));
+app.get("/", (req, res) => {
+  res.json({ ok: true, service: "Over Rentals API", health: "/api/health" });
+});
+
+// Anything else: a clear JSON error instead of Express's HTML "Cannot POST ..." page.
 app.use((req, res) => {
-  res.sendFile(path.join(distPath, "index.html"));
+  res.status(404).json({ error: `Not found: ${req.method} ${req.path}` });
 });
 
 app.listen(port, () => {
-  console.log(`Over Rentals server running on http://localhost:${port} (email: ${emailProvider()}, subscribers: ${subscriberStore()})`);
+  console.log(`Over Rentals API running on http://localhost:${port} (email: ${emailProvider()}, subscribers: ${subscriberStore()})`);
   startChatInbox();
 });

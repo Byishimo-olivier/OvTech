@@ -1,8 +1,10 @@
+# Optional Render setup (backend API only). The frontend can be deployed separately from frontend/.
 services:
   - type: web
     name: ovtech-corporate-website
     env: node
     plan: free
-    buildCommand: npm install && npm run build
+    rootDir: backend
+    buildCommand: npm install
     startCommand: npm start
     autoDeploy: true
